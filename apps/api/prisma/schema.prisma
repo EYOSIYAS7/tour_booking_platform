@@ -1,0 +1,21 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // This loads the connection string from your .env file
+}
+
+// Define the User table for our database
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String? // The '?' makes this field optional
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

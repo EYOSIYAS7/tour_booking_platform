@@ -15,7 +15,7 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String? // The '?' makes this field optional
-  password  String
+  hash  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

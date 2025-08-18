@@ -31,7 +31,8 @@ export class AuthService {
       },
     });
 
-    // Return JWT tokens
+    // Return JWT tokens an access token so the user can authenticate without needing to log in again
+    // immediately after signing up
     return this.signTokens(newUser.id, newUser.email);
   }
 
@@ -50,7 +51,8 @@ export class AuthService {
       throw new ForbiddenException('Invalid credentials');
     }
 
-    // Return JWT tokens
+    // Return JWT tokens an access token so the user can authenticate
+    // without needing to log in again immediately after signing in
     return this.signTokens(user.id, user.email);
   }
 

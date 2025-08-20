@@ -6,11 +6,13 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
+  // a rule-book to check the access token is valid before sending the user info
   constructor(private prisma: PrismaService) {
     super({
+      // the super configures the underlying passport-jwt strategy which is we extend
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: 'super-secret', // MUST be the same secret as in AuthService
+      secretOrKey: 'at-secret', // MUST be the same secret as in AuthService
     });
   }
 
@@ -28,7 +30,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       return null;
     }
     // This is the fix: Destructure the object to exclude the 'hash' property
-    const { hash, ...result } = user;
+    const { hash, hashRt, ...result } = user;
     return result;
   }
 }

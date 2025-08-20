@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuthDto } from './dto/auth.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import { Tokens } from './types/tokens.type';
 
 @Injectable()
 export class AuthService {
@@ -11,7 +12,7 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async signup(dto: AuthDto) {
+  async signup(dto: AuthDto): Promise<Tokens> {
     // Check if user already exists
     const userExists = await this.prisma.user.findUnique({
       where: { email: dto.email },
@@ -33,10 +34,12 @@ export class AuthService {
 
     // Return JWT tokens an access token so the user can authenticate without needing to log in again
     // immediately after signing up
-    return this.signTokens(newUser.id, newUser.email);
+    const tokens = await this.signTokens(newUser.id, newUser.email);
+    await this.updateRtHash(newUser.id, tokens.refresh_token);
+    return tokens;
   }
 
-  async signin(dto: AuthDto) {
+  async signin(dto: AuthDto): Promise<Tokens> {
     // Find the user by email
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
@@ -53,22 +56,59 @@ export class AuthService {
 
     // Return JWT tokens an access token so the user can authenticate
     // without needing to log in again immediately after signing in
-    return this.signTokens(user.id, user.email);
+    const tokens = await this.signTokens(user.id, user.email);
+    await this.updateRtHash(user.id, tokens.refresh_token);
+    return tokens;
+  }
+  async logout(userId: string) {
+    // We find the user and delete their refresh token hash
+    await this.prisma.user.updateMany({
+      where: {
+        id: userId,
+        hashRt: {
+          not: null,
+        },
+      },
+      data: {
+        hashRt: null,
+      },
+    });
   }
 
-  // Helper function to sign JWT tokens
-  async signTokens(
-    userId: string,
-    email: string,
-  ): Promise<{ access_token: string }> {
-    const payload = { sub: userId, email };
-    const secret = 'super-secret'; // IMPORTANT: Use a real secret from environment variables in production
+  // This function checks if the refresh token is valid and returns new access and refresh tokens
+  async refreshTokens(userId: string, rt: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.hashRt) throw new ForbiddenException('Access Denied');
 
-    const token = await this.jwtService.signAsync(payload, {
-      expiresIn: '15m',
-      secret: secret,
+    const rtMatches = await bcrypt.compare(rt, user.hashRt);
+    if (!rtMatches) throw new ForbiddenException('Access Denied');
+
+    const tokens = await this.signTokens(user.id, user.email);
+    await this.updateRtHash(user.id, tokens.refresh_token);
+    return tokens;
+  }
+  // HELPER METHODS
+  async updateRtHash(userId: string, rt: string) {
+    const hash = await bcrypt.hash(rt, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { hashRt: hash },
     });
+  }
+  // Helper function to sign JWT tokens
+  async signTokens(userId: string, email: string): Promise<Tokens> {
+    const payload = { sub: userId, email };
+    const [at, rt] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        expiresIn: '15m',
+        secret: 'at-secret',
+      }),
+      this.jwtService.signAsync(payload, {
+        expiresIn: '7d',
+        secret: 'rt-secret',
+      }),
+    ]);
 
-    return { access_token: token };
+    return { access_token: at, refresh_token: rt };
   }
 }

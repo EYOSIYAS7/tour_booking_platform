@@ -19,4 +19,23 @@ model User {
   hashRt    String? 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  tour Tour[] // A user can have many tours
+}
+
+
+model Tour {
+  id          String   @id @default(cuid())
+  name        String
+  location    String
+  description String
+  price       Int
+  startDate   DateTime
+  endDate     DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // The relation field
+  provider    User     @relation(fields: [providerId], references: [id])
+  providerId  String   // The foreign key
 }

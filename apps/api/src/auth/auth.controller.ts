@@ -14,7 +14,7 @@ import { GetUser } from './decorator/get-user.decorator';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt')) // protects this route with JWT strategy by validating the access token
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   logout(@GetUser('id') userId: string) {

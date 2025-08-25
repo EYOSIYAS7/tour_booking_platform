@@ -42,6 +42,8 @@ export class ToursController {
     @Param('id') tourId: string,
     @Body() dto: CreateTourDto,
   ) {
+    // at this point the dto is an instance of CreateTourDto
+    // like { name: 'New name', location: 'New location'.... }
     return this.toursService.updateTourById(userId, tourId, dto);
   }
 

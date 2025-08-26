@@ -38,6 +38,8 @@ export class AuthController {
 
   @Post('signup')
   @HttpCode(HttpStatus.CREATED)
+  // use @Res to set cookies in the response object and passthrough to allow Nest to still handle the response
+  // inject the response object from express as a nest decorator
   async signup(
     @Body() dto: AuthDto,
     @Res({ passthrough: true }) res: Response,

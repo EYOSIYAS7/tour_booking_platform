@@ -23,24 +23,26 @@ export default function SignupPage() {
     resolver: zodResolver(signupSchema),
   });
 
-  const mutation = useMutation({
-    mutationFn: async (data: SignupFormValues) => {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const response = await fetch(`${apiUrl}/auth/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-        credentials: "include", // Important for the server to be able to set cookies
-      });
+  const signup = async (data: SignupFormValues) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    const response = await fetch(`${apiUrl}/auth/signup`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+      credentials: "include", // Important for the server to be able to set cookies
+    });
 
-      if (!response.ok) {
-        // You might want to parse the error message from the server here
-        throw new Error("Signup failed. The email might already be in use.");
-      }
-      return response.json();
-    },
+    if (!response.ok) {
+      // You might want to parse the error message from the server here
+      throw new Error("Signup failed. The email might already be in use.");
+    }
+    return response.json();
+  };
+
+  const mutation = useMutation({
+    mutationFn: signup,
     onSuccess: () => {
       router.push("/login");
     },

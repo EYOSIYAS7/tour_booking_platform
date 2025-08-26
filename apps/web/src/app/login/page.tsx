@@ -42,23 +42,25 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  const mutation = useMutation({
-    mutationFn: async (data: LoginFormValues) => {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const response = await fetch(`${apiUrl}/auth/signin`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-        credentials: "include", // Crucial for receiving cookies
-      });
+  const loginUser = async (data: LoginFormValues) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    const response = await fetch(`${apiUrl}/auth/signin`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+      credentials: "include", // Crucial for receiving cookies
+    });
 
-      if (!response.ok) {
-        throw new Error("Invalid credentials");
-      }
-      return response.json();
-    },
+    if (!response.ok) {
+      throw new Error("Invalid credentials");
+    }
+    return response.json();
+  };
+
+  const mutation = useMutation({
+    mutationFn: loginUser,
     onSuccess: async () => {
       const userData = await queryClient.fetchQuery({
         queryKey: ["me"],

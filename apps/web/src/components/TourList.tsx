@@ -28,12 +28,14 @@ const getTours = async (): Promise<Tour[]> => {
   }
 
   // We need to manually parse the JSON from the response
+  // parse is converting the JSON string into a JavaScript object that we can use in our code
   return response.json();
 };
 
 export default function TourList() {
   // useQuery remains exactly the same. It doesn't care HOW we fetch the data,
   // only that the queryFn returns a promise.
+  // useQuery automatically handles loading and error states for us. and  manages caching, refetching, and more.
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["tours"],
     queryFn: getTours,
@@ -50,25 +52,42 @@ export default function TourList() {
   }
 
   return (
-    <div className="w-full max-w-5xl">
-      <h1 className="text-3xl font-bold mb-6 text-center">Available Tours</h1>
+    <div className="w-full max-w-5xl mx-auto px-4 py-12 min-h-[80vh] rounded-2xl shadow-xl ">
+      <h1 className="text-4xl font-extrabold mb-10 text-center tracking-tight text-gray-900">
+        <span className="inline-block align-middle mr-2"></span>
+        <span className="align-middle text-amber-50">Explore Tours</span>
+      </h1>
       {data && data.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {data.map((tour) => (
             <div
               key={tour.id}
-              className="bg-white border border-slate-200 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+              className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6 flex flex-col gap-3 hover:scale-[1.025] transition-transform"
             >
-              <h2 className="font-semibold text-xl mb-2">{tour.name}</h2>
-              <p className="text-slate-600 mb-1">Location: {tour.location}</p>
-              <p className="text-slate-800 font-medium text-lg">
-                ${tour.price}
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="font-semibold text-lg text-gray-900 truncate">
+                  {tour.name}
+                </h2>
+                <span className="bg-gray-100 text-gray-600 text-xs px-3 py-0.5 rounded-full font-medium">
+                  {tour.location}
+                </span>
+              </div>
+              <p className="text-gray-500 text-sm line-clamp-3 mb-4">
+                {tour.description}
               </p>
+              <div className="flex items-center justify-between mt-auto">
+                <span className="text-xl font-bold text-indigo-600">
+                  ${tour.price}
+                </span>
+                <button className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-5 py-1.5 rounded-lg shadow-sm transition-colors duration-150">
+                  View Details
+                </button>
+              </div>
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-center text-slate-500">
+        <p className="text-center text-gray-400 text-lg mt-20">
           No tours available at the moment.
         </p>
       )}

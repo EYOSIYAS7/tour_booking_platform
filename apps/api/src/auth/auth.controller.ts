@@ -10,6 +10,9 @@ import { AuthService } from './auth.service';
 import { AuthDto } from './dto/auth.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { GetUser } from './decorator/get-user.decorator';
+import { Res, Response as ExpressResponse } from '@nestjs/common';
+import type { Response } from 'express';
+
 @Controller('auth') // Define the base route for this controller which is "/auth/...."
 export class AuthController {
   constructor(private authService: AuthService) {}
@@ -35,16 +38,47 @@ export class AuthController {
 
   @Post('signup')
   @HttpCode(HttpStatus.CREATED)
-  signup(@Body() dto: AuthDto) {
-    //accepts the JSON body from the request and maps it to the AuthDto and performs validation
-    // If the validation fails, it will throw an error automatically
-    // If it passes, it will call the signup method in AuthService
-    return this.authService.signup(dto);
+  async signup(
+    @Body() dto: AuthDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const tokens = await this.authService.signup(dto);
+    res.cookie('access_token', tokens.access_token, {
+      httpOnly: true,
+      secure: false,
+    }); // Set secure: true in production
+    res.cookie('refresh_token', tokens.refresh_token, {
+      httpOnly: true,
+      secure: false,
+    });
+    return { message: 'Signup successful' };
   }
+
+  // signup(@Body() dto: AuthDto) {
+  //   //accepts the JSON body from the request and maps it to the AuthDto and performs validation
+  //   // If the validation fails, it will throw an error automatically
+  //   // If it passes, it will call the signup method in AuthService
+  //   return this.authService.signup(dto);
+  // }
 
   @Post('signin')
   @HttpCode(HttpStatus.OK)
-  signin(@Body() dto: AuthDto) {
-    return this.authService.signin(dto);
+  async signin(
+    @Body() dto: AuthDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const tokens = await this.authService.signin(dto);
+    res.cookie('access_token', tokens.access_token, {
+      httpOnly: true,
+      secure: false,
+    });
+    res.cookie('refresh_token', tokens.refresh_token, {
+      httpOnly: true,
+      secure: false,
+    });
+    return { message: 'Signin successful' };
   }
+  // signin(@Body() dto: AuthDto) {
+  //   return this.authService.signin(dto);
+  // }
 }

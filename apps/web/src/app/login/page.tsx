@@ -9,6 +9,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 
+// defines the validation schema
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1, "Password is required"),
@@ -16,7 +17,7 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-// This function now uses fetch to get the user's data
+// This function now uses fetch to get the user's data that is going to be used in tanstack query to fetch user data after login
 const getMe = async () => {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const response = await fetch(`${apiUrl}/users/me`, {
@@ -34,6 +35,11 @@ export default function LoginPage() {
   const loginToStore = useAuthStore((state) => state.login);
   const queryClient = useQueryClient();
 
+  // useForm hook to manage form state and validation using zod schema
+  // with zodResolver to integrate zod with react-hook-form
+  // Destructure register, handleSubmit, and formState from useForm
+  // register is used to register input fields,
+  // handleSubmit
   const {
     register,
     handleSubmit,
@@ -42,6 +48,7 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
+  // this is function is used to make login request that is going to be used by mutate function of tanstack query
   const loginUser = async (data: LoginFormValues) => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     const response = await fetch(`${apiUrl}/auth/signin`, {
@@ -71,6 +78,7 @@ export default function LoginPage() {
     },
   });
 
+  // this is called by handleSubmit after it validates the user data by the schema that is defined using zod
   const onSubmit = (data: LoginFormValues) => {
     mutation.mutate(data);
   };
@@ -133,6 +141,7 @@ export default function LoginPage() {
             id="password"
             type="password"
             autoComplete="current-password"
+            // register
             {...register("password")}
             className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
           />

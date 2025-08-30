@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Provider"; // Import our provider
+import Navbar from "@/components/Navbar";
+import AuthInitializer from "@/components/AuthInitializer";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,7 +21,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Providers>{children}</Providers> {/* Wrap children with Providers */}
+        <Providers>
+          <AuthInitializer />
+          <Navbar />
+
+          {children}
+        </Providers>{" "}
+        {/* Wrap children with Providers */}
       </body>
     </html>
   );

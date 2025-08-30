@@ -20,7 +20,13 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt')) // protects this route with JWT strategy by validating the access token
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  logout(@GetUser('id') userId: string) {
+  logout(
+    @GetUser('id') userId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    // removes the auth token from the cookie
+    res.clearCookie('access_token');
+    res.clearCookie('refresh_token');
     // This method will be used to log out the user by invalidating the refresh token
     return this.authService.logout(userId);
   }

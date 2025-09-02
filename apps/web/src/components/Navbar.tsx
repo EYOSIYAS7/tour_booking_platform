@@ -34,44 +34,55 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow-md p-4">
-      <div className="container mx-auto flex justify-between items-center">
-        <Link href="/" className="text-xl font-bold text-indigo-600">
+    <nav className="bg-white border-b border-gray-100 py-4">
+      <div className="container mx-auto flex justify-between items-center px-6">
+        <Link
+          href="/"
+          className="text-2xl font-semibold text-indigo-600 tracking-tight"
+        >
           TourAddis
         </Link>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-5">
           {isAuthenticated ? (
-            <>
-              <span>Welcome, {user?.email}</span>
+            <div className="flex items-center space-x-5">
+              <span className="text-gray-700 font-medium">
+                Welcome, {user?.email}
+              </span>
               <Link
                 href="/dashboard"
-                className="text-gray-600 hover:text-indigo-600"
+                className="text-gray-600 hover:text-indigo-600 transition-colors duration-200"
               >
                 Dashboard
+              </Link>
+              <Link
+                href="/my-bookings"
+                className="text-gray-600 hover:text-emerald-600 transition-colors duration-200"
+              >
+                My Bookings
               </Link>
               <button
                 onClick={handleLogout}
                 disabled={mutation.isPending}
-                className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
+                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors duration-200 disabled:opacity-50"
               >
                 Logout
               </button>
-            </>
+            </div>
           ) : (
-            <>
+            <div className="flex items-center space-x-4">
               <Link
                 href="/login"
-                className="text-gray-600 hover:text-indigo-600"
+                className="text-gray-600 hover:text-indigo-600 transition-colors duration-200"
               >
                 Login
               </Link>
               <Link
                 href="/signup"
-                className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
+                className="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition-colors duration-200"
               >
                 Sign Up
               </Link>
-            </>
+            </div>
           )}
         </div>
       </div>

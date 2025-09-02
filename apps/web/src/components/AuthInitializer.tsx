@@ -25,9 +25,11 @@ export default function AuthInitializer() {
 
   useEffect(() => {
     if (isSuccess && data) {
+      // update the zustand store with user data on successful fetch
       login(data);
     }
     if (isError) {
+      // clear the zustand store on error
       logout();
     }
   }, [isSuccess, isError, data, login, logout]);

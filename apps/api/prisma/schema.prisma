@@ -21,6 +21,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   tour Tour[] // A user can have many tours
+  booking Booking[] // A user can have many bookings
 }
 
 
@@ -35,7 +36,20 @@ model Tour {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  bookings    Booking[] // A tour can have many bookings
+
   // The relation field
   provider    User     @relation(fields: [providerId], references: [id])
   providerId  String   // The foreign key
+}
+
+model Booking{
+  id        String   @id @default(cuid())
+  tour      Tour     @relation(fields: [tourId], references: [id])
+  tourId    String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  bookingDate DateTime  @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -44,7 +44,7 @@ export default function TourList() {
     queryKey: ["tours"],
     queryFn: getTours,
   });
-
+  const [file, setFile] = useState<File | null>(null);
   const bookingMutation = useMutation({
     mutationFn: (tourId: string) => {
       return fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings`, {
@@ -58,6 +58,29 @@ export default function TourList() {
       // Optionally, invalidate queries to refetch data, e.g., user's bookings
       queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
       alert("Tour booked successfully!");
+    },
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: (tourId: string) => {
+      if (!file) throw new Error("No file selected");
+
+      const formData = new FormData();
+      formData.append("file", file); // 'file' must match the name in FileInterceptor
+
+      return fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/tours/${tourId}/upload-image`,
+        {
+          method: "POST",
+          credentials: "include", // Important for sending our auth cookie
+          body: formData,
+          // DO NOT set Content-Type header manually when using FormData
+        }
+      );
+    },
+    onSuccess: () => {
+      alert("Image uploaded!");
+      queryClient.invalidateQueries({ queryKey: ["tours"] }); // Refetch tours to show new image
     },
   });
 
@@ -111,6 +134,18 @@ export default function TourList() {
                     >
                       {bookingMutation.isPending ? "Booking..." : "Book Now"}
                     </button>
+                  )}
+
+                  {isAuthenticated /* Assuming only logged-in users who own the tour can see this */ && (
+                    <div className="mt-4 text-black">
+                      <input
+                        type="file"
+                        onChange={(e) => setFile(e.target.files?.[0] || null)}
+                      />
+                      <button onClick={() => uploadMutation.mutate(tour.id)}>
+                        Upload
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

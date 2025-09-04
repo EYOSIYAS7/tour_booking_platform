@@ -1,10 +1,28 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTourDto } from './dto/create-tour.dto';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { ConfigService } from '@nestjs/config';
 
+const supabase_Url = 'https://goiszpiclwkiqgrjpuod.supabase.co';
+const supabaseKey = 'SUPABASE-KEY';
 @Injectable()
 export class ToursService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(ToursService.name);
+  private supabase: SupabaseClient;
+
+  constructor(
+    private prisma: PrismaService,
+    private configService: ConfigService, // We can keep this for now
+  ) {
+    this.supabase = createClient(supabase_Url, supabaseKey);
+    this.logger.log('Supabase client initialized for debugging.');
+  }
 
   async createTour(userId: string, dto: CreateTourDto) {
     const tour = await this.prisma.tour.create({
@@ -57,5 +75,76 @@ export class ToursService {
     await this.prisma.tour.delete({
       where: { id: tourId },
     });
+  }
+  async uploadTourImage(
+    userId: string,
+    tourId: string,
+    file: Express.Multer.File,
+  ) {
+    this.logger.log(
+      `Starting image upload for tourId: ${tourId} by userId: ${userId}`,
+    );
+
+    // --- 1. Authorization Check ---
+    const tour = await this.prisma.tour.findUnique({ where: { id: tourId } });
+    if (!tour || tour.providerId !== userId) {
+      this.logger.warn(
+        `Authorization failed for userId: ${userId} on tourId: ${tourId}`,
+      );
+      throw new ForbiddenException('Access to resources denied');
+    }
+    this.logger.log('Authorization successful.');
+
+    // --- 2. File Validation ---
+    if (!file) {
+      this.logger.error('File is undefined in service method.');
+      throw new InternalServerErrorException('No file provided.');
+    }
+    this.logger.log(
+      `File received: ${file.originalname}, size: ${file.size}, mimetype: ${file.mimetype}`,
+    );
+
+    // --- 3. Upload to Supabase ---
+    const newFileName = `${userId}-${tourId}-${Date.now()}-${file.originalname}`;
+    this.logger.log(
+      `Attempting to upload to bucket 'tour-images' with new name: ${newFileName}`,
+    );
+
+    const { data: uploadData, error: uploadError } = await this.supabase.storage
+      .from('tour_image')
+      .upload(newFileName, file.buffer, {
+        contentType: file.mimetype,
+      });
+
+    // --- 4. CRITICAL ERROR HANDLING ---
+    if (uploadError) {
+      this.logger.error('Supabase upload failed!', uploadError);
+      throw new InternalServerErrorException(
+        `Storage error: ${uploadError.message}`,
+      );
+    }
+    if (!uploadData) {
+      this.logger.error('Supabase upload returned no data and no error.');
+      throw new InternalServerErrorException(
+        'Upload failed with no data returned.',
+      );
+    }
+    this.logger.log(`Supabase upload successful. Path: ${uploadData.path}`);
+
+    // --- 5. Get Public URL ---
+    const { data: urlData } = this.supabase.storage
+      .from('tour_image')
+      .getPublicUrl(uploadData.path);
+
+    this.logger.log(`Generated public URL: ${urlData.publicUrl}`);
+
+    // --- 6. Update Database ---
+    const updatedTour = await this.prisma.tour.update({
+      where: { id: tourId },
+      data: { imageUrl: urlData.publicUrl },
+    });
+    this.logger.log(`Database updated successfully for tourId: ${tourId}`);
+
+    return updatedTour;
   }
 }

@@ -6,9 +6,18 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ToursModule } from './tours/tours.module';
 import { BookingModule } from './booking/booking.module';
+import { ConfigModule } from '@nestjs/config';
+import { SupabaseModule } from './supabase/supabase.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, UsersModule, ToursModule, BookingModule],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    PrismaModule,
+    AuthModule,
+    UsersModule,
+    ToursModule,
+    BookingModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

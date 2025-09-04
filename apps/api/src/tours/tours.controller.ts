@@ -14,6 +14,8 @@ import { AuthGuard } from '@nestjs/passport';
 import { GetUser } from '../auth/decorator/get-user.decorator';
 import { CreateTourDto } from './dto/create-tour.dto';
 import { ToursService } from './tours.service';
+import { UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('tours')
 export class ToursController {
@@ -52,5 +54,16 @@ export class ToursController {
   @Delete(':id')
   deleteTourById(@GetUser('id') userId: string, @Param('id') tourId: string) {
     return this.toursService.deleteTourById(userId, tourId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post(':id/upload-image')
+  @UseInterceptors(FileInterceptor('file')) // Tells NestJS to process one file from the 'file' field
+  uploadTourImage(
+    @GetUser('id') userId: string,
+    @Param('id') tourId: string,
+    @UploadedFile() file: Express.Multer.File, // Injects the file object
+  ) {
+    return this.toursService.uploadTourImage(userId, tourId, file);
   }
 }

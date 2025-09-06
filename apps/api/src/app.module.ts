@@ -8,6 +8,7 @@ import { ToursModule } from './tours/tours.module';
 import { BookingModule } from './booking/booking.module';
 import { ConfigModule } from '@nestjs/config';
 import { SupabaseModule } from './supabase/supabase.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { SupabaseModule } from './supabase/supabase.module';
     UsersModule,
     ToursModule,
     BookingModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

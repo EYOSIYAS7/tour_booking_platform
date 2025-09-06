@@ -34,8 +34,40 @@ export class ToursService {
     return tour;
   }
 
-  getTours() {
-    return this.prisma.tour.findMany();
+  // getTours() {
+  //   return this.prisma.tour.findMany();
+  // }
+
+  async getTours() {
+    // We use Prisma's aggregation features directly in the query.
+    const tours = await this.prisma.tour.findMany({
+      include: {
+        _count: {
+          select: { review: true }, // Select the count of related review
+        },
+        review: {
+          select: { rating: true }, // Select only the rating from review
+        },
+      },
+    });
+
+    // Now we map over the results to calculate the average rating in our application code.
+    return tours.map((tour) => {
+      const totalRating = tour.review.reduce(
+        (acc, review) => acc + review.rating,
+        0,
+      );
+      const reviewCount = tour._count.review;
+      const avgRating = reviewCount > 0 ? totalRating / reviewCount : 0;
+
+      // We clean up the response object to send only what's needed.
+      const { review, _count, ...tourData } = tour;
+      return {
+        ...tourData,
+        reviewCount,
+        avgRating: parseFloat(avgRating.toFixed(1)), // Format to one decimal place
+      };
+    });
   }
 
   getTourById(tourId: string) {

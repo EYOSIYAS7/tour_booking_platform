@@ -17,7 +17,7 @@ import { ToursService } from './tours.service';
 import { UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 
-@Controller('tours')
+@Controller('tours') // base url
 export class ToursController {
   constructor(private toursService: ToursService) {}
 

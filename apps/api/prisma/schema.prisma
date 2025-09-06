@@ -1,56 +1,68 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL") // This loads the connection string from your .env file
+  url      = env("DATABASE_URL")
 }
 
-// Define the User table for our database
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String? // The '?' makes this field optional
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   hash      String
-  hashRt    String? 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tour Tour[] // A user can have many tours
-  booking Booking[] // A user can have many bookings
+  hashRt    String?
+  booking   Booking[]
+  review    Review[]
+  tour      Tour[]
 }
-
 
 model Tour {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
-  imageUrl    String?
   location    String
   description String
   price       Int
   startDate   DateTime
   endDate     DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  bookings    Booking[] // A tour can have many bookings
-
-  // The relation field
-  provider    User     @relation(fields: [providerId], references: [id])
-  providerId  String   // The foreign key
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  providerId  String
+  imageUrl    String?
+  bookings    Booking[]
+  review      Review[]
+  provider    User      @relation(fields: [providerId], references: [id])
 }
 
-model Booking{
+model Booking {
+  id          String   @id @default(cuid())
+  tourId      String
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  bookingDate DateTime @default(now())
+  tour        Tour     @relation(fields: [tourId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model Review {
   id        String   @id @default(cuid())
-  tour      Tour     @relation(fields: [tourId], references: [id])
-  tourId    String
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  bookingDate DateTime  @default(now())
+  rating    Int      // Rating from 1 to 5
+  comment   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Relation to the user who wrote the review
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+
+  // Relation to the tour being reviewed
+  tour      Tour     @relation(fields: [tourId], references: [id])
+  tourId    String
+
+  // Database-level constraint: a user can only review a tour once
+  @@unique([userId, tourId])
 }

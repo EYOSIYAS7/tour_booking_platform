@@ -10,6 +10,7 @@ import {
   StarIcon,
   PlayIcon,
 } from "@heroicons/react/24/solid"; // Example using heroicons
+import Link from "next/link";
 
 // Define a type for our tour data for type-safety
 type Tour = {
@@ -155,95 +156,99 @@ export default function TourList() {
         {data && data.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {data.map((tour) => (
-              <div
-                key={tour.id}
-                className="rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 bg-white flex flex-col group"
-              >
-                <div className="relative">
-                  <img
-                    src={
-                      tour.imageUrl ||
-                      "https://placehold.co/600x400/EEE/31343C?text=Tour+Image"
-                    }
-                    alt={tour.name}
-                    className="w-full h-56 object-cover transform group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-semibold text-gray-800 flex items-center">
-                    <StarIcon className="w-4 h-4 text-yellow-500 mr-1" />
-                    {tour.avgRating.toFixed(1)}
-                    <span className="text-gray-500 ml-1">
-                      ({tour.reviewCount})
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-6 flex flex-col flex-grow">
-                  <p className="text-sm font-semibold text-indigo-600 uppercase tracking-wider flex items-center">
-                    <GlobeAltIcon className="w-4 h-4 mr-2" />
-                    {tour.location}
-                  </p>
-                  <h2 className="text-2xl font-bold text-gray-900 my-2">
-                    {tour.name}
-                  </h2>
-                  <p className="text-gray-600 line-clamp-3 flex-grow">
-                    {tour.description}
-                  </p>
-
-                  <div className="mt-6 flex justify-between items-center">
-                    <span className="text-3xl text-gray-900 font-bold">
-                      ${tour.price}
-                    </span>
-                  </div>
-
-                  {/* Action Buttons */}
-                  {isAuthenticated && (
-                    <div className="mt-6 pt-6 border-t border-gray-200">
-                      <button
-                        onClick={() => bookingMutation.mutate(tour.id)}
-                        disabled={bookingMutation.isPending}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                      >
-                        <BookOpenIcon className="w-5 h-5 mr-2" />
-                        {bookingMutation.isPending ? "Booking..." : "Book Now"}
-                      </button>
-
-                      {/* Improved File Upload UI */}
-                      <div className="mt-4 text-center">
-                        <label
-                          htmlFor={`file-upload-${tour.id}`}
-                          className="cursor-pointer text-sm font-medium text-indigo-600 hover:text-indigo-500"
-                        >
-                          Update Tour Image
-                        </label>
-                        <input
-                          id={`file-upload-${tour.id}`}
-                          type="file"
-                          className="sr-only"
-                          onChange={handleFileChange}
-                        />
-                        {selectedFileName && (
-                          <p className="text-xs text-gray-500 mt-2 truncate">
-                            Selected: {selectedFileName}
-                          </p>
-                        )}
-
-                        {file && (
-                          <button
-                            onClick={() => uploadMutation.mutate(tour.id)}
-                            disabled={uploadMutation.isPending}
-                            className="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md text-sm disabled:opacity-50 flex items-center justify-center"
-                          >
-                            <PlayIcon className="w-4 h-4 mr-2" />
-                            {uploadMutation.isPending
-                              ? "Uploading..."
-                              : "Confirm Upload"}
-                          </button>
-                        )}
-                      </div>
+              <Link href={`/tours/${tour.id}`} key={tour.id}>
+                <div
+                  key={tour.id}
+                  className="rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 bg-white flex flex-col group"
+                >
+                  <div className="relative">
+                    <img
+                      src={
+                        tour.imageUrl ||
+                        "https://placehold.co/600x400/EEE/31343C?text=Tour+Image"
+                      }
+                      alt={tour.name}
+                      className="w-full h-56 object-cover transform group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-semibold text-gray-800 flex items-center">
+                      <StarIcon className="w-4 h-4 text-yellow-500 mr-1" />
+                      {tour.avgRating.toFixed(1)}
+                      <span className="text-gray-500 ml-1">
+                        ({tour.reviewCount})
+                      </span>
                     </div>
-                  )}
+                  </div>
+
+                  <div className="p-6 flex flex-col flex-grow">
+                    <p className="text-sm font-semibold text-indigo-600 uppercase tracking-wider flex items-center">
+                      <GlobeAltIcon className="w-4 h-4 mr-2" />
+                      {tour.location}
+                    </p>
+                    <h2 className="text-2xl font-bold text-gray-900 my-2">
+                      {tour.name}
+                    </h2>
+                    <p className="text-gray-600 line-clamp-3 flex-grow">
+                      {tour.description}
+                    </p>
+
+                    <div className="mt-6 flex justify-between items-center">
+                      <span className="text-3xl text-gray-900 font-bold">
+                        ${tour.price}
+                      </span>
+                    </div>
+
+                    {/* Action Buttons */}
+                    {isAuthenticated && (
+                      <div className="mt-6 pt-6 border-t border-gray-200">
+                        <button
+                          onClick={() => bookingMutation.mutate(tour.id)}
+                          disabled={bookingMutation.isPending}
+                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        >
+                          <BookOpenIcon className="w-5 h-5 mr-2" />
+                          {bookingMutation.isPending
+                            ? "Booking..."
+                            : "Book Now"}
+                        </button>
+
+                        {/* Improved File Upload UI */}
+                        <div className="mt-4 text-center">
+                          <label
+                            htmlFor={`file-upload-${tour.id}`}
+                            className="cursor-pointer text-sm font-medium text-indigo-600 hover:text-indigo-500"
+                          >
+                            Update Tour Image
+                          </label>
+                          <input
+                            id={`file-upload-${tour.id}`}
+                            type="file"
+                            className="sr-only"
+                            onChange={handleFileChange}
+                          />
+                          {selectedFileName && (
+                            <p className="text-xs text-gray-500 mt-2 truncate">
+                              Selected: {selectedFileName}
+                            </p>
+                          )}
+
+                          {file && (
+                            <button
+                              onClick={() => uploadMutation.mutate(tour.id)}
+                              disabled={uploadMutation.isPending}
+                              className="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md text-sm disabled:opacity-50 flex items-center justify-center"
+                            >
+                              <PlayIcon className="w-4 h-4 mr-2" />
+                              {uploadMutation.isPending
+                                ? "Uploading..."
+                                : "Confirm Upload"}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         ) : (

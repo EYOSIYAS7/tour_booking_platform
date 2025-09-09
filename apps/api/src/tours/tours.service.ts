@@ -10,7 +10,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { ConfigService } from '@nestjs/config';
 
 const supabase_Url = 'https://goiszpiclwkiqgrjpuod.supabase.co';
-const supabaseKey = 'SUPABASE-KEY';
+const supabaseKey =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvaXN6cGljbHdraXFncmpwdW9kIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTE4MDYxNCwiZXhwIjoyMDcwNzU2NjE0fQ.Fr9NnozlPudXjCYZRRjNKs49ks20R2Rp61P20cQPyPs';
 @Injectable()
 export class ToursService {
   private readonly logger = new Logger(ToursService.name);
@@ -70,10 +71,52 @@ export class ToursService {
     });
   }
 
-  getTourById(tourId: string) {
-    return this.prisma.tour.findUnique({
+  // getTourById(tourId: string) {
+  //   return this.prisma.tour.findUnique({
+  //     where: { id: tourId },
+  //   });
+  // }
+
+  async getTourById(tourId: string) {
+    const tour = await this.prisma.tour.findUnique({
       where: { id: tourId },
+      include: {
+        review: {
+          select: {
+            rating: true,
+            comment: true,
+          },
+        },
+        _count: {
+          select: { review: true },
+        },
+      },
     });
+
+    if (!tour) {
+      return null;
+    }
+
+    // Calculate the average rating
+    const totalRating = tour.review.reduce(
+      (acc, review) => acc + review.rating,
+      0,
+    );
+    const reviewCount = tour._count.review;
+    const avgRating = reviewCount > 0 ? totalRating / reviewCount : 0;
+
+    // Extract all review comments into a separate array
+    const reviewComments = tour.review.map((review) => review.comment);
+
+    // Clean up the response object
+    const { review, _count, ...tourData } = tour;
+
+    return {
+      ...tourData,
+      reviewCount,
+      avgRating: parseFloat(avgRating.toFixed(1)),
+      reviewComments, // Include the new array of comments
+    };
   }
 
   async updateTourById(userId: string, tourId: string, dto: CreateTourDto) {

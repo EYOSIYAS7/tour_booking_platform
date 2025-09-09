@@ -5,6 +5,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import React from "react";
+import { useParams } from "next/navigation";
 
 // --- Type Definitions ---
 // These should ideally be in a shared types file later
@@ -23,16 +24,18 @@ type Tour = {
   name: string;
   location: string;
   description: string;
+  avgRating: number;
+  reviewCount: number;
   price: number;
   imageUrl: string | null;
-  reviews: Review[];
+  reviewComments: [];
 };
 
 // --- API Fetching Function ---
-const getTourById = async (tourId: string): Promise<Tour> => {
+const getTourById = async (tourId: any): Promise<Tour> => {
   console.log("tour id", tourId);
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/tours/cmer6iemi0003wn68gxqiu9az`
+    `${process.env.NEXT_PUBLIC_API_URL}/tours/${tourId}`
   );
   if (!response.ok) {
     throw new Error("Failed to fetch tour details");
@@ -45,7 +48,9 @@ export default function TourDetailPage({ params }: PageProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuthStore();
-  const { tourId } = React.use(params);
+  const Params = useParams();
+  const tourId = Params?.id;
+  console.log("tour id rightaway", tourId);
   //   const tourId = params.id;
 
   // --- Data Fetching with TanStack Query ---
@@ -134,21 +139,44 @@ export default function TourDetailPage({ params }: PageProps) {
       </div>
 
       {/* Reviews Section */}
-      <div className="mt-12">
-        <h2 className="text-2xl font-semibold mb-6">Reviews</h2>
-        <div className="space-y-6">
-          {tour.reviews ? (
-            tour.reviews.map((review) => (
-              <div key={review.id} className="bg-white p-4 border rounded-lg">
-                <p className="font-semibold">{review.user.email}</p>
-                <p className="text-yellow-500">{"⭐".repeat(review.rating)}</p>
-                <p className="mt-2 text-gray-600">{review.comment}</p>
-              </div>
-            ))
-          ) : (
-            <p className="text-gray-500">No reviews for this tour yet.</p>
-          )}
+      <div className="mt-16">
+        <h2 className="text-3xl font-bold tracking-tight mb-8">
+          Customers's Saying
+        </h2>
+        <div className="flex items-center space-x-4 mb-8">
+          <div className="flex text-yellow-400">
+            {"★".repeat(Math.floor(tour.avgRating))}
+            {"☆".repeat(5 - Math.floor(tour.avgRating))}
+          </div>
+          <span className="text-2xl font-semibold text-gray-800">
+            {tour.avgRating.toFixed(1)}
+          </span>
+          <span className="text-gray-500 text-sm">
+            Based on {tour.reviewCount}{" "}
+            {tour.reviewCount === 1 ? "review" : "reviews"}
+          </span>
         </div>
+
+        {tour.reviewComments.length > 0 ? (
+          <div className="space-y-8">
+            {tour.reviewComments.map((comment, index) => (
+              <div key={index} className="relative p-6 bg-gray-50 rounded-lg">
+                <p className="italic text-gray-600 before:content-['“'] after:content-['”']">
+                  {comment}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-gray-100 p-8 rounded-lg text-center">
+            <p className="text-gray-600 font-medium">
+              This tour has no reviews yet.
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              Be the first to leave a review and help other travelers!
+            </p>
+          </div>
+        )}
       </div>
     </main>
   );

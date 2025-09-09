@@ -156,11 +156,11 @@ export default function TourList() {
         {data && data.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {data.map((tour) => (
-              <Link href={`/tours/${tour.id}`} key={tour.id}>
-                <div
-                  key={tour.id}
-                  className="rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 bg-white flex flex-col group"
-                >
+              <div
+                key={tour.id}
+                className="rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 bg-white flex flex-col group"
+              >
+                <Link href={`/tours/${tour.id}`} key={tour.id}>
                   <div className="relative">
                     <img
                       src={
@@ -178,77 +178,74 @@ export default function TourList() {
                       </span>
                     </div>
                   </div>
+                </Link>
+                <div className="p-6 flex flex-col flex-grow">
+                  <p className="text-sm font-semibold text-indigo-600 uppercase tracking-wider flex items-center">
+                    <GlobeAltIcon className="w-4 h-4 mr-2" />
+                    {tour.location}
+                  </p>
+                  <h2 className="text-2xl font-bold text-gray-900 my-2">
+                    {tour.name}
+                  </h2>
+                  <p className="text-gray-600 line-clamp-3 flex-grow">
+                    {tour.description}
+                  </p>
 
-                  <div className="p-6 flex flex-col flex-grow">
-                    <p className="text-sm font-semibold text-indigo-600 uppercase tracking-wider flex items-center">
-                      <GlobeAltIcon className="w-4 h-4 mr-2" />
-                      {tour.location}
-                    </p>
-                    <h2 className="text-2xl font-bold text-gray-900 my-2">
-                      {tour.name}
-                    </h2>
-                    <p className="text-gray-600 line-clamp-3 flex-grow">
-                      {tour.description}
-                    </p>
-
-                    <div className="mt-6 flex justify-between items-center">
-                      <span className="text-3xl text-gray-900 font-bold">
-                        ${tour.price}
-                      </span>
-                    </div>
-
-                    {/* Action Buttons */}
-                    {isAuthenticated && (
-                      <div className="mt-6 pt-6 border-t border-gray-200">
-                        <button
-                          onClick={() => bookingMutation.mutate(tour.id)}
-                          disabled={bookingMutation.isPending}
-                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                        >
-                          <BookOpenIcon className="w-5 h-5 mr-2" />
-                          {bookingMutation.isPending
-                            ? "Booking..."
-                            : "Book Now"}
-                        </button>
-
-                        {/* Improved File Upload UI */}
-                        <div className="mt-4 text-center">
-                          <label
-                            htmlFor={`file-upload-${tour.id}`}
-                            className="cursor-pointer text-sm font-medium text-indigo-600 hover:text-indigo-500"
-                          >
-                            Update Tour Image
-                          </label>
-                          <input
-                            id={`file-upload-${tour.id}`}
-                            type="file"
-                            className="sr-only"
-                            onChange={handleFileChange}
-                          />
-                          {selectedFileName && (
-                            <p className="text-xs text-gray-500 mt-2 truncate">
-                              Selected: {selectedFileName}
-                            </p>
-                          )}
-
-                          {file && (
-                            <button
-                              onClick={() => uploadMutation.mutate(tour.id)}
-                              disabled={uploadMutation.isPending}
-                              className="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md text-sm disabled:opacity-50 flex items-center justify-center"
-                            >
-                              <PlayIcon className="w-4 h-4 mr-2" />
-                              {uploadMutation.isPending
-                                ? "Uploading..."
-                                : "Confirm Upload"}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                  <div className="mt-6 flex justify-between items-center">
+                    <span className="text-3xl text-gray-900 font-bold">
+                      ${tour.price}
+                    </span>
                   </div>
+
+                  {/* Action Buttons */}
+                  {isAuthenticated && (
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                      <button
+                        onClick={() => bookingMutation.mutate(tour.id)}
+                        disabled={bookingMutation.isPending}
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                      >
+                        <BookOpenIcon className="w-5 h-5 mr-2" />
+                        {bookingMutation.isPending ? "Booking..." : "Book Now"}
+                      </button>
+
+                      {/* Improved File Upload UI */}
+                      <div className="mt-4 text-center">
+                        <label
+                          htmlFor={`file-upload-${tour.id}`}
+                          className="cursor-pointer text-sm font-medium text-indigo-600 hover:text-indigo-500"
+                        >
+                          Update Tour Image
+                        </label>
+                        <input
+                          id={`file-upload-${tour.id}`}
+                          type="file"
+                          className="sr-only"
+                          onChange={handleFileChange}
+                        />
+                        {selectedFileName && (
+                          <p className="text-xs text-gray-500 mt-2 truncate">
+                            Selected: {selectedFileName}
+                          </p>
+                        )}
+
+                        {file && (
+                          <button
+                            onClick={() => uploadMutation.mutate(tour.id)}
+                            disabled={uploadMutation.isPending}
+                            className="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md text-sm disabled:opacity-50 flex items-center justify-center"
+                          >
+                            <PlayIcon className="w-4 h-4 mr-2" />
+                            {uploadMutation.isPending
+                              ? "Uploading..."
+                              : "Confirm Upload"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         ) : (

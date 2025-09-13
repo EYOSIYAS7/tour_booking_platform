@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTourDto } from './dto/create-tour.dto';
@@ -151,6 +152,42 @@ export class ToursService {
       where: { id: tourId },
     });
   }
+  // -- ADMIN LOGIC --
+
+  async adminGetAllTours() {
+    return this.prisma.tour.findMany({
+      include: {
+        provider: {
+          select: { email: true },
+        },
+      },
+    });
+  }
+  //logic for the tour update for the admin
+  async adminUpdateTourById(tourId: string, dto: CreateTourDto) {
+    // First, check if the tour exists at all
+    const tour = await this.prisma.tour.findUnique({ where: { id: tourId } });
+    if (!tour) throw new NotFoundException('Tour not found');
+
+    // Directly update the tour without checking ownership
+    return this.prisma.tour.update({
+      where: { id: tourId },
+      data: { ...dto },
+    });
+  }
+
+  async adminDeleteTourById(tourId: string) {
+    //Check if the tour exists at all
+    const tour = await this.prisma.tour.findUnique({ where: { id: tourId } });
+    if (!tour) throw new NotFoundException('tour not found ');
+
+    // Directly delete the tour with out checking the ownership
+    return this.prisma.tour.delete({
+      where: { id: tourId },
+    });
+  }
+
+  //Image upload endpoint
   async uploadTourImage(
     userId: string,
     tourId: string,

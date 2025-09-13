@@ -43,6 +43,16 @@ export default function Navbar() {
           TourAddis
         </Link>
         <div className="flex items-center space-x-5">
+          {isAuthenticated && user?.role === "ADMIN" && (
+            <>
+              <Link
+                href="/admin"
+                className="text-gray-600 hover:text-indigo-600"
+              >
+                Admin
+              </Link>
+            </>
+          )}
           {isAuthenticated ? (
             <div className="flex items-center space-x-5">
               <span className="text-gray-700 font-medium">

@@ -16,12 +16,13 @@ import { CreateTourDto } from './dto/create-tour.dto';
 import { ToursService } from './tours.service';
 import { UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { AdminGuard } from 'src/auth/guards/admin.guard';
 
 @Controller('tours') // base url
 export class ToursController {
   constructor(private toursService: ToursService) {}
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), AdminGuard)
   @Post()
   createTour(@GetUser('id') userId: string, @Body() dto: CreateTourDto) {
     return this.toursService.createTour(userId, dto);
@@ -65,5 +66,25 @@ export class ToursController {
     @UploadedFile() file: Express.Multer.File, // Injects the file object
   ) {
     return this.toursService.uploadTourImage(userId, tourId, file);
+  }
+
+  // -- ADMIN ROUTES --
+
+  @UseGuards(AuthGuard('jwt'), AdminGuard)
+  @Get('admin/all') // admin-only route
+  adminGetAllTours() {
+    return this.toursService.adminGetAllTours();
+  }
+  @UseGuards(AuthGuard('jwt'), AdminGuard) // Admin guard to protect the route
+  @Patch('admin/:id') // Scoped route for admin update
+  adminUpdateTourById(@Param('id') tourId: string, @Body() dto: CreateTourDto) {
+    return this.toursService.adminUpdateTourById(tourId, dto);
+  }
+
+  @UseGuards(AuthGuard('jwt'), AdminGuard) // Admin guard to protect the route
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete('admin/:id') // Scoped route for admin delete
+  adminDeleteTourById(@Param('id') tourId: string) {
+    return this.toursService.adminDeleteTourById(tourId);
   }
 }

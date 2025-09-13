@@ -1,9 +1,11 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { GetUser } from '../auth/decorator/get-user.decorator';
 import type { User } from '@prisma/client';
 import { AdminGuard } from 'src/auth/guards/admin.guard';
 import { UsersService } from './users.service';
+import { dot } from 'node:test/reporters';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 
 @Controller('users') // Define the base route for this controller which is "/users/...."
 export class UsersController {
@@ -16,10 +18,17 @@ export class UsersController {
     // and it will not include the password hash due to the destructuring in JwtStrategy
     return user;
   }
-
+  // -- ADMIN ROUTES --
   @UseGuards(AuthGuard('jwt'), AdminGuard)
   @Get('all')
   getAllUsers() {
     return this.usersService.findAll();
+  }
+
+  @UseGuards(AuthGuard('jwt'), AdminGuard)
+  @Patch('admin/:id/role')
+  updateUserRole(@Param('id') userId: string, @Body() dto: UpdateUserRoleDto) {
+    // Params and Body
+    return this.usersService.updateUserRole(userId, dto);
   }
 }

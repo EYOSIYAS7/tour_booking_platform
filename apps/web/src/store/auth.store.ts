@@ -1,10 +1,16 @@
 // apps/web/src/store/auth.store.ts
 import { create } from "zustand";
 
+export enum Role {
+  ADMIN = "ADMIN",
+  USER = "USER",
+  // Add other roles as needed
+}
 type User = {
   id: string;
   email: string;
   name: string | null;
+  role: Role;
 };
 
 // Define the shape of the authentication state

@@ -35,4 +35,22 @@ export class BookingService {
       },
     });
   }
+
+  // --ADMIN LOGIC-- //
+  async adminGetAllBookings() {
+    return this.prisma.booking.findMany({
+      orderBy: {
+        bookingDate: 'desc', // Show the most recent bookings first
+      },
+      // This is the key part: we include related data
+      include: {
+        user: {
+          select: { email: true, name: true }, // Get the user's email and name
+        },
+        tour: {
+          select: { name: true }, // Get the tour's name
+        },
+      },
+    });
+  }
 }

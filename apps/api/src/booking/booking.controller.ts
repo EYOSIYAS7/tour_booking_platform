@@ -3,6 +3,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { GetUser } from 'src/auth/decorator/get-user.decorator';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { AdminGuard } from 'src/auth/guards/admin.guard';
 
 @UseGuards(AuthGuard('jwt')) // Protect all routes in this controller
 @Controller('bookings') // Base route for all booking-related endpoints
@@ -19,5 +20,12 @@ export class BookingController {
   @Get('my-bookings')
   get_BookingForUser(@GetUser('id') userId: string) {
     return this.bookingService.getBookingsForUser(userId);
+  }
+
+  // -- ADMIN ROUTES --//
+  @UseGuards(AuthGuard('jwt'), AdminGuard) // Ensure only authenticated admins can access this route
+  @Get('admin/all')
+  adminGetAllBookings() {
+    return this.bookingService.adminGetAllBookings();
   }
 }

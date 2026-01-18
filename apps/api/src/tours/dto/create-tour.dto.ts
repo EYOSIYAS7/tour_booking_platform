@@ -1,5 +1,12 @@
 // apps/api/src/tours/dto/create-tour.dto.ts
-import { IsString, IsNotEmpty, IsInt, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsInt,
+  IsDateString,
+  IsDate,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateTourDto {
   @IsString()
@@ -18,11 +25,13 @@ export class CreateTourDto {
   @IsNotEmpty()
   price: number;
 
-  @IsDateString()
+  @IsDate()
   @IsNotEmpty()
+  @Type(() => Date)
   startDate: string;
 
-  @IsDateString()
+  @IsDate()
   @IsNotEmpty()
+  @Type(() => Date)
   endDate: string;
 }

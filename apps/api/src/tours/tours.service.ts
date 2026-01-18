@@ -10,9 +10,9 @@ import { CreateTourDto } from './dto/create-tour.dto';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { ConfigService } from '@nestjs/config';
 
-const supabase_Url = 'https://goiszpiclwkiqgrjpuod.supabase.co';
+const supabase_Url = 'https://bqbcbufzakefgxojmayd.supabase.co';
 const supabaseKey =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvaXN6cGljbHdraXFncmpwdW9kIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTE4MDYxNCwiZXhwIjoyMDcwNzU2NjE0fQ.Fr9NnozlPudXjCYZRRjNKs49ks20R2Rp61P20cQPyPs';
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxYmNidWZ6YWtlZmd4b2ptYXlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3MjM3MjksImV4cCI6MjA4NDI5OTcyOX0.vRscqq0qQtiNwD8bvYBOXlOzy2VhgX5XXD3W1MLN1_Y';
 @Injectable()
 export class ToursService {
   private readonly logger = new Logger(ToursService.name);

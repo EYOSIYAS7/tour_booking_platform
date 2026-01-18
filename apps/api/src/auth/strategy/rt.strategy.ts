@@ -23,10 +23,15 @@ export class RtStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
   }
 
   validate(req: Request, payload: any) {
-    const authHeader = req.get('authorization');
-    const refreshToken = authHeader
-      ? authHeader.replace('Bearer', '').trim()
-      : null;
+    const refreshToken = req.cookies['refresh_token']; // Fix: Get from cookie, not header
     return { ...payload, refreshToken };
   }
+
+  // validate(req: Request, payload: any) {
+  //   const authHeader = req.get('authorization');
+  //   const refreshToken = authHeader
+  //     ? authHeader.replace('Bearer', '').trim()
+  //     : null;
+  //   return { ...payload, refreshToken };
+  // }
 }

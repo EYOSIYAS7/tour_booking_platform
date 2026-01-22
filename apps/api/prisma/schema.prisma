@@ -5,12 +5,21 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
+
  
 }
 
 enum Role {
   USER
   ADMIN
+}
+
+enum BookingStatus {
+  PENDING      // Awaiting payment
+  CONFIRMED    // Payment successful
+  CANCELLED    // Cancelled by user or admin
+  COMPLETED    // Tour has been completed
+  FAILED       // Payment failed
 }
 
 model User {
@@ -39,6 +48,11 @@ model Tour {
   updatedAt   DateTime  @updatedAt
   providerId  String
   imageUrl    String?
+
+    // NEW: Capacity fields
+  maxParticipants Int @default(50)
+  bookedSlots Int @default(0)
+
   bookings    Booking[]
   review      Review[]
   provider    User      @relation(fields: [providerId], references: [id])
@@ -51,8 +65,23 @@ model Booking {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   bookingDate DateTime @default(now())
+
+    // NEW: Status and payment tracking
+  status BookingStatus @default(PENDING)
+  numberOfParticipants Int @default(1)
+  totalAmount Int // Calculated based on tour price * participants
+  paymentReference String? @unique // Chapa transaction reference
+  paidAt DateTime? // When payment was confirmed
+  cancelledAt DateTime? // When booking was cancelled
+  cancellationReason String? // Reason for cancellation
+
+
   tour        Tour     @relation(fields: [tourId], references: [id])
   user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([tourId])
+  @@index([status])
 }
 
 model Review {

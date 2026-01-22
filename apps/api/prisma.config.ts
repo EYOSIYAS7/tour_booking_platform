@@ -6,6 +6,6 @@ export default defineConfig({
   schema: 'prisma/schema.prisma',
   datasource: {
     // IMPORTANT: Use DIRECT_URL for migrations (no pooler)
-    url: process.env.DATABASE_URL,
+    url: process.env.DIRECT_URL,
   },
 });

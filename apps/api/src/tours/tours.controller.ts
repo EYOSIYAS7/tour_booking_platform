@@ -1,3 +1,4 @@
+// apps/api/src/tours/tours.controller.ts
 import {
   Body,
   Controller,
@@ -9,34 +10,52 @@ import {
   Patch,
   Post,
   UseGuards,
+  Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { GetUser } from '../auth/decorator/get-user.decorator';
-import { CreateTourDto } from './dto/create-tour.dto';
-import { ToursService } from './tours.service';
-import { UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { AdminGuard } from 'src/auth/guards/admin.guard';
+import { GetUser } from '../auth/decorator/get-user.decorator';
+import { AdminGuard } from '../auth/guards/admin.guard';
+import { CreateTourDto } from './dto/create-tour.dto';
+import { QueryToursDto } from './dto/query-tours.dto';
+import { ToursService } from './tours.service';
 
-@Controller('tours') // base url
+@Controller('tours')
 export class ToursController {
   constructor(private toursService: ToursService) {}
 
-  @UseGuards(AuthGuard('jwt'), AdminGuard)
-  @Post()
-  createTour(@GetUser('id') userId: string, @Body() dto: CreateTourDto) {
-    return this.toursService.createTour(userId, dto);
-  }
+  // PUBLIC ROUTES
 
   @Get()
   getTours() {
     return this.toursService.getTours();
   }
 
+  @Get('search')
+  searchAndFilterTours(@Query() query: QueryToursDto) {
+    return this.toursService.searchAndFilterTours(query);
+  }
+
+  @Get('popular-locations')
+  getPopularLocations(@Query('limit') limit?: number) {
+    return this.toursService.getPopularLocations(
+      limit ? parseInt(limit as any) : 10,
+    );
+  }
+
+  @Get('price-range')
+  getPriceRange() {
+    return this.toursService.getPriceRange();
+  }
+
   @Get(':id')
   getTourById(@Param('id') tourId: string) {
     return this.toursService.getTourById(tourId);
   }
+
+  // AUTHENTICATED USER ROUTES
 
   @UseGuards(AuthGuard('jwt'))
   @Patch(':id')
@@ -45,8 +64,6 @@ export class ToursController {
     @Param('id') tourId: string,
     @Body() dto: CreateTourDto,
   ) {
-    // at this point the dto is an instance of CreateTourDto
-    // like { name: 'New name', location: 'New location'.... }
     return this.toursService.updateTourById(userId, tourId, dto);
   }
 
@@ -59,31 +76,38 @@ export class ToursController {
 
   @UseGuards(AuthGuard('jwt'))
   @Post(':id/upload-image')
-  @UseInterceptors(FileInterceptor('file')) // Tells NestJS to process one file from the 'file' field
+  @UseInterceptors(FileInterceptor('file'))
   uploadTourImage(
     @GetUser('id') userId: string,
     @Param('id') tourId: string,
-    @UploadedFile() file: Express.Multer.File, // Injects the file object
+    @UploadedFile() file: Express.Multer.File,
   ) {
     return this.toursService.uploadTourImage(userId, tourId, file);
   }
 
-  // -- ADMIN ROUTES --
+  // ADMIN ROUTES
 
   @UseGuards(AuthGuard('jwt'), AdminGuard)
-  @Get('admin/all') // admin-only route
+  @Post()
+  createTour(@GetUser('id') userId: string, @Body() dto: CreateTourDto) {
+    return this.toursService.createTour(userId, dto);
+  }
+
+  @UseGuards(AuthGuard('jwt'), AdminGuard)
+  @Get('admin/all')
   adminGetAllTours() {
     return this.toursService.adminGetAllTours();
   }
-  @UseGuards(AuthGuard('jwt'), AdminGuard) // Admin guard to protect the route
-  @Patch('admin/:id') // Scoped route for admin update
+
+  @UseGuards(AuthGuard('jwt'), AdminGuard)
+  @Patch('admin/:id')
   adminUpdateTourById(@Param('id') tourId: string, @Body() dto: CreateTourDto) {
     return this.toursService.adminUpdateTourById(tourId, dto);
   }
 
-  @UseGuards(AuthGuard('jwt'), AdminGuard) // Admin guard to protect the route
+  @UseGuards(AuthGuard('jwt'), AdminGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Delete('admin/:id') // Scoped route for admin delete
+  @Delete('admin/:id')
   adminDeleteTourById(@Param('id') tourId: string) {
     return this.toursService.adminDeleteTourById(tourId);
   }

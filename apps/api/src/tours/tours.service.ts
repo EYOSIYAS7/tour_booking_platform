@@ -1,3 +1,4 @@
+// apps/api/src/tours/tours.service.ts
 import {
   ForbiddenException,
   Injectable,
@@ -7,12 +8,15 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTourDto } from './dto/create-tour.dto';
+import { QueryToursDto, SortBy } from './dto/query-tours.dto';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 
-const supabase_Url = 'https://bqbcbufzakefgxojmayd.supabase.co';
+const supabase_Url = 'https://goiszpiclwkiqgrjpuod.supabase.co';
 const supabaseKey =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxYmNidWZ6YWtlZmd4b2ptYXlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3MjM3MjksImV4cCI6MjA4NDI5OTcyOX0.vRscqq0qQtiNwD8bvYBOXlOzy2VhgX5XXD3W1MLN1_Y';
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvaXN6cGljbHdraXFncmpwdW9kIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTE4MDYxNCwiZXhwIjoyMDcwNzU2NjE0fQ.Fr9NnozlPudXjCYZRRjNKs49ks20R2Rp61P20cQPyPs';
+
 @Injectable()
 export class ToursService {
   private readonly logger = new Logger(ToursService.name);
@@ -20,7 +24,7 @@ export class ToursService {
 
   constructor(
     private prisma: PrismaService,
-    private configService: ConfigService, // We can keep this for now
+    private configService: ConfigService,
   ) {
     this.supabase = createClient(supabase_Url, supabaseKey);
     this.logger.log('Supabase client initialized for debugging.');
@@ -36,24 +40,18 @@ export class ToursService {
     return tour;
   }
 
-  // getTours() {
-  //   return this.prisma.tour.findMany();
-  // }
-
   async getTours() {
-    // We use Prisma's aggregation features directly in the query.
     const tours = await this.prisma.tour.findMany({
       include: {
         _count: {
-          select: { review: true }, // Select the count of related review
+          select: { review: true },
         },
         review: {
-          select: { rating: true }, // Select only the rating from review
+          select: { rating: true },
         },
       },
     });
 
-    // Now we map over the results to calculate the average rating in our application code.
     return tours.map((tour) => {
       const totalRating = tour.review.reduce(
         (acc, review) => acc + review.rating,
@@ -62,21 +60,196 @@ export class ToursService {
       const reviewCount = tour._count.review;
       const avgRating = reviewCount > 0 ? totalRating / reviewCount : 0;
 
-      // We clean up the response object to send only what's needed.
       const { review, _count, ...tourData } = tour;
       return {
         ...tourData,
         reviewCount,
-        avgRating: parseFloat(avgRating.toFixed(1)), // Format to one decimal place
+        avgRating: parseFloat(avgRating.toFixed(1)),
+        availableSlots: tour.maxParticipants - tour.bookedSlots,
       };
     });
   }
 
-  // getTourById(tourId: string) {
-  //   return this.prisma.tour.findUnique({
-  //     where: { id: tourId },
-  //   });
-  // }
+  async searchAndFilterTours(query: QueryToursDto) {
+    const {
+      search,
+      location,
+      minPrice,
+      maxPrice,
+      startDate,
+      endDate,
+      minRating,
+      availableOnly,
+      sortBy = SortBy.CREATED_DESC,
+      page = 1,
+      limit = 10,
+    } = query;
+
+    // Build the where clause
+    const where: Prisma.TourWhereInput = {};
+
+    // Search by name or description
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { location: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Filter by location
+    if (location) {
+      where.location = { contains: location, mode: 'insensitive' };
+    }
+
+    // Filter by price range
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      where.price = {};
+      if (minPrice !== undefined) {
+        where.price.gte = minPrice;
+      }
+      if (maxPrice !== undefined) {
+        where.price.lte = maxPrice;
+      }
+    }
+
+    // Filter by date range
+    if (startDate || endDate) {
+      if (!where.AND) {
+        where.AND = [];
+      }
+      if (startDate) {
+        (where.AND as Prisma.TourWhereInput[]).push({
+          startDate: { gte: new Date(startDate) },
+        });
+      }
+      if (endDate) {
+        (where.AND as Prisma.TourWhereInput[]).push({
+          endDate: { lte: new Date(endDate) },
+        });
+      }
+    }
+
+    // Filter by availability
+    if (availableOnly) {
+      if (!where.AND) {
+        where.AND = [];
+      }
+      (where.AND as Prisma.TourWhereInput[]).push({
+        bookedSlots: { lt: this.prisma.tour.fields.maxParticipants },
+      });
+    }
+
+    // Build the orderBy clause
+    const orderBy: Prisma.TourOrderByWithRelationInput[] = [];
+
+    switch (sortBy) {
+      case SortBy.PRICE_ASC:
+        orderBy.push({ price: 'asc' });
+        break;
+      case SortBy.PRICE_DESC:
+        orderBy.push({ price: 'desc' });
+        break;
+      case SortBy.DATE_ASC:
+        orderBy.push({ startDate: 'asc' });
+        break;
+      case SortBy.DATE_DESC:
+        orderBy.push({ startDate: 'desc' });
+        break;
+      case SortBy.CREATED_DESC:
+        orderBy.push({ createdAt: 'desc' });
+        break;
+      // For rating and popularity, we'll handle these separately
+      default:
+        orderBy.push({ createdAt: 'desc' });
+    }
+
+    // Calculate pagination
+    const skip = (page - 1) * limit;
+
+    // Execute the query
+    const [tours, totalCount] = await Promise.all([
+      this.prisma.tour.findMany({
+        where,
+        orderBy,
+        skip,
+        take: limit,
+        include: {
+          _count: {
+            select: { review: true, bookings: true },
+          },
+          review: {
+            select: { rating: true },
+          },
+        },
+      }),
+      this.prisma.tour.count({ where }),
+    ]);
+
+    // Calculate ratings and filter by minRating if provided
+    let processedTours = tours.map((tour) => {
+      const totalRating = tour.review.reduce(
+        (acc, review) => acc + review.rating,
+        0,
+      );
+      const reviewCount = tour._count.review;
+      const avgRating = reviewCount > 0 ? totalRating / reviewCount : 0;
+      const bookingCount = tour._count.bookings;
+      const availableSlots = tour.maxParticipants - tour.bookedSlots;
+
+      const { review, _count, ...tourData } = tour;
+      return {
+        ...tourData,
+        reviewCount,
+        avgRating: parseFloat(avgRating.toFixed(1)),
+        bookingCount,
+        availableSlots,
+        isAvailable: availableSlots > 0,
+      };
+    });
+
+    // Filter by minimum rating (after calculation)
+    if (minRating !== undefined) {
+      processedTours = processedTours.filter(
+        (tour) => tour.avgRating >= minRating,
+      );
+    }
+
+    // Sort by rating or popularity if specified
+    if (sortBy === SortBy.RATING_DESC) {
+      processedTours.sort((a, b) => b.avgRating - a.avgRating);
+    } else if (sortBy === SortBy.POPULARITY_DESC) {
+      processedTours.sort((a, b) => b.bookingCount - a.bookingCount);
+    }
+
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(totalCount / limit);
+    const hasNextPage = page < totalPages;
+    const hasPreviousPage = page > 1;
+
+    return {
+      data: processedTours,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCount,
+        limit,
+        hasNextPage,
+        hasPreviousPage,
+      },
+      filters: {
+        search,
+        location,
+        minPrice,
+        maxPrice,
+        startDate,
+        endDate,
+        minRating,
+        availableOnly,
+        sortBy,
+      },
+    };
+  }
 
   async getTourById(tourId: string) {
     const tour = await this.prisma.tour.findUnique({
@@ -86,10 +259,26 @@ export class ToursService {
           select: {
             rating: true,
             comment: true,
+            createdAt: true,
+            user: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
           },
         },
         _count: {
-          select: { review: true },
+          select: { review: true, bookings: true },
+        },
+        provider: {
+          select: {
+            name: true,
+            email: true,
+          },
         },
       },
     });
@@ -98,35 +287,38 @@ export class ToursService {
       return null;
     }
 
-    // Calculate the average rating
     const totalRating = tour.review.reduce(
       (acc, review) => acc + review.rating,
       0,
     );
     const reviewCount = tour._count.review;
     const avgRating = reviewCount > 0 ? totalRating / reviewCount : 0;
+    const bookingCount = tour._count.bookings;
+    const availableSlots = tour.maxParticipants - tour.bookedSlots;
 
-    // Extract all review comments into a separate array
-    const reviewComments = tour.review.map((review) => review.comment);
-
-    // Clean up the response object
     const { review, _count, ...tourData } = tour;
 
     return {
       ...tourData,
       reviewCount,
       avgRating: parseFloat(avgRating.toFixed(1)),
-      reviewComments, // Include the new array of comments
+      bookingCount,
+      availableSlots,
+      isAvailable: availableSlots > 0,
+      reviews: review.map((r) => ({
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.createdAt,
+        userName: r.user.name || r.user.email,
+      })),
     };
   }
 
   async updateTourById(userId: string, tourId: string, dto: CreateTourDto) {
-    // Get the tour first
     const tour = await this.prisma.tour.findUnique({
       where: { id: tourId },
     });
 
-    // Check if the user owns the tour
     if (!tour || tour.providerId !== userId) {
       throw new ForbiddenException('Access to resources denied');
     }
@@ -138,12 +330,10 @@ export class ToursService {
   }
 
   async deleteTourById(userId: string, tourId: string) {
-    // Get the tour first
     const tour = await this.prisma.tour.findUnique({
       where: { id: tourId },
     });
 
-    // Check if the user owns the tour
     if (!tour || tour.providerId !== userId) {
       throw new ForbiddenException('Access to resources denied');
     }
@@ -152,24 +342,28 @@ export class ToursService {
       where: { id: tourId },
     });
   }
-  // -- ADMIN LOGIC --
 
+  // -- ADMIN LOGIC --
   async adminGetAllTours() {
     return this.prisma.tour.findMany({
       include: {
         provider: {
           select: { email: true },
         },
+        _count: {
+          select: { bookings: true, review: true },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
   }
-  //logic for the tour update for the admin
+
   async adminUpdateTourById(tourId: string, dto: CreateTourDto) {
-    // First, check if the tour exists at all
     const tour = await this.prisma.tour.findUnique({ where: { id: tourId } });
     if (!tour) throw new NotFoundException('Tour not found');
 
-    // Directly update the tour without checking ownership
     return this.prisma.tour.update({
       where: { id: tourId },
       data: { ...dto },
@@ -177,17 +371,14 @@ export class ToursService {
   }
 
   async adminDeleteTourById(tourId: string) {
-    //Check if the tour exists at all
     const tour = await this.prisma.tour.findUnique({ where: { id: tourId } });
     if (!tour) throw new NotFoundException('tour not found ');
 
-    // Directly delete the tour with out checking the ownership
     return this.prisma.tour.delete({
       where: { id: tourId },
     });
   }
 
-  //Image upload endpoint
   async uploadTourImage(
     userId: string,
     tourId: string,
@@ -197,7 +388,6 @@ export class ToursService {
       `Starting image upload for tourId: ${tourId} by userId: ${userId}`,
     );
 
-    // --- 1. Authorization Check ---
     const tour = await this.prisma.tour.findUnique({ where: { id: tourId } });
     if (!tour || tour.providerId !== userId) {
       this.logger.warn(
@@ -205,18 +395,18 @@ export class ToursService {
       );
       throw new ForbiddenException('Access to resources denied');
     }
+
     this.logger.log('Authorization successful.');
 
-    // --- 2. File Validation ---
     if (!file) {
       this.logger.error('File is undefined in service method.');
       throw new InternalServerErrorException('No file provided.');
     }
+
     this.logger.log(
       `File received: ${file.originalname}, size: ${file.size}, mimetype: ${file.mimetype}`,
     );
 
-    // --- 3. Upload to Supabase ---
     const newFileName = `${userId}-${tourId}-${Date.now()}-${file.originalname}`;
     this.logger.log(
       `Attempting to upload to bucket 'tour-images' with new name: ${newFileName}`,
@@ -228,35 +418,71 @@ export class ToursService {
         contentType: file.mimetype,
       });
 
-    // --- 4. CRITICAL ERROR HANDLING ---
     if (uploadError) {
       this.logger.error('Supabase upload failed!', uploadError);
       throw new InternalServerErrorException(
         `Storage error: ${uploadError.message}`,
       );
     }
+
     if (!uploadData) {
       this.logger.error('Supabase upload returned no data and no error.');
       throw new InternalServerErrorException(
         'Upload failed with no data returned.',
       );
     }
+
     this.logger.log(`Supabase upload successful. Path: ${uploadData.path}`);
 
-    // --- 5. Get Public URL ---
     const { data: urlData } = this.supabase.storage
       .from('tour_image')
       .getPublicUrl(uploadData.path);
 
     this.logger.log(`Generated public URL: ${urlData.publicUrl}`);
 
-    // --- 6. Update Database ---
     const updatedTour = await this.prisma.tour.update({
       where: { id: tourId },
       data: { imageUrl: urlData.publicUrl },
     });
+
     this.logger.log(`Database updated successfully for tourId: ${tourId}`);
 
     return updatedTour;
+  }
+
+  // Get popular locations
+  async getPopularLocations(limit: number = 10) {
+    const locations = await this.prisma.tour.groupBy({
+      by: ['location'],
+      _count: {
+        location: true,
+      },
+      orderBy: {
+        _count: {
+          location: 'desc',
+        },
+      },
+      take: limit,
+    });
+
+    return locations.map((loc) => ({
+      location: loc.location,
+      tourCount: loc._count.location,
+    }));
+  }
+
+  // Get price range statistics
+  async getPriceRange() {
+    const stats = await this.prisma.tour.aggregate({
+      _min: { price: true },
+      _max: { price: true },
+      _avg: { price: true },
+    });
+
+    return {
+      minPrice: stats._min.price || 0,
+      maxPrice: stats._max.price || 0,
+      avgPrice: stats._avg.price ? Math.round(stats._avg.price) : 0,
+    };
   }
 }

@@ -10,6 +10,8 @@ import { ConfigModule } from '@nestjs/config';
 import { SupabaseModule } from './supabase/supabase.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { PaymentsModule } from './payment/payment.module';
+import { EmailModule } from './email/email.module';
+import { CategoriesModule } from './categories/categories.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { PaymentsModule } from './payment/payment.module';
     BookingModule,
     ReviewsModule,
     PaymentsModule,
+    EmailModule,
+    CategoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -74,6 +74,7 @@ export class ToursService {
     const {
       search,
       location,
+      categoryIds,
       minPrice,
       maxPrice,
       startDate,
@@ -139,6 +140,16 @@ export class ToursService {
         bookedSlots: { lt: this.prisma.tour.fields.maxParticipants },
       });
     }
+    // Filter by categories
+    if (categoryIds && categoryIds.length > 0) {
+      where.categories = {
+        some: {
+          categoryId: {
+            in: categoryIds,
+          },
+        },
+      };
+    }
 
     // Build the orderBy clause
     const orderBy: Prisma.TourOrderByWithRelationInput[] = [];
@@ -180,6 +191,20 @@ export class ToursService {
           },
           review: {
             select: { rating: true },
+          },
+          categories: {
+            // ADD THIS
+            include: {
+              category: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                  icon: true,
+                  color: true,
+                },
+              },
+            },
           },
         },
       }),

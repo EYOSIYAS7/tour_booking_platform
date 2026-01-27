@@ -1,12 +1,12 @@
+// apps/api/prisma/schema.prisma
+// ADD CATEGORY MODEL AND UPDATE TOUR MODEL
+
 generator client {
-  provider     = "prisma-client-js"  // Fixed typo in your suggestion
-  moduleFormat = "cjs"  // Ensures CommonJS output
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-
- 
+  provider = "postgresql"
 }
 
 enum Role {
@@ -15,90 +15,118 @@ enum Role {
 }
 
 enum BookingStatus {
-  PENDING      // Awaiting payment
-  CONFIRMED    // Payment successful
-  CANCELLED    // Cancelled by user or admin
-  COMPLETED    // Tour has been completed
-  FAILED       // Payment failed
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  FAILED
 }
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  name      String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  hash      String
-  hashRt    String?
-  role      Role      @default(USER)
-  booking   Booking[]
-  review    Review[]
-  tour      Tour[]
+  id String @id @default(cuid())
+  email String @unique
+  name String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  hash String
+  hashRt String?
+  role Role @default(USER)
+  booking Booking[]
+  review Review[]
+  tour Tour[]
 }
 
 model Tour {
-  id          String    @id @default(cuid())
-  name        String
-  location    String
+  id String @id @default(cuid())
+  name String
+  location String
   description String
-  price       Int
-  startDate   DateTime
-  endDate     DateTime
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  providerId  String
-  imageUrl    String?
-
-    // NEW: Capacity fields
+  price Int
+  startDate DateTime
+  endDate DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  providerId String
+  imageUrl String?
   maxParticipants Int @default(50)
   bookedSlots Int @default(0)
+  
+  bookings Booking[]
+  review Review[]
+  provider User @relation(fields: [providerId], references: [id])
+  categories TourCategory[] // NEW: Many-to-many relation
+  
+  @@index([providerId])
+  @@index([location])
+  @@index([startDate])
+}
 
-  bookings    Booking[]
-  review      Review[]
-  provider    User      @relation(fields: [providerId], references: [id])
+// NEW: Category Model
+model Category {
+  id String @id @default(cuid())
+  name String @unique
+  slug String @unique
+  description String?
+  icon String? // Emoji or icon name
+  color String? // Hex color for UI
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  tours TourCategory[] // Many-to-many relation
+  
+  @@index([slug])
+}
+
+// NEW: Junction table for Many-to-Many relationship
+model TourCategory {
+  id String @id @default(cuid())
+  tourId String
+  categoryId String
+  assignedAt DateTime @default(now())
+  
+  tour Tour @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  @@unique([tourId, categoryId]) // Prevent duplicate assignments
+  @@index([tourId])
+  @@index([categoryId])
 }
 
 model Booking {
-  id          String   @id @default(cuid())
-  tourId      String
-  userId      String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id String @id @default(cuid())
+  tourId String
+  userId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   bookingDate DateTime @default(now())
-
-    // NEW: Status and payment tracking
   status BookingStatus @default(PENDING)
   numberOfParticipants Int @default(1)
-  totalAmount Int // Calculated based on tour price * participants
-  paymentReference String? @unique // Chapa transaction reference
-  paidAt DateTime? // When payment was confirmed
-  cancelledAt DateTime? // When booking was cancelled
-  cancellationReason String? // Reason for cancellation
-
-
-  tour        Tour     @relation(fields: [tourId], references: [id])
-  user        User     @relation(fields: [userId], references: [id])
-
+  totalAmount Int
+  paymentReference String? @unique
+  paidAt DateTime?
+  cancelledAt DateTime?
+  cancellationReason String?
+  
+  tour Tour @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
   @@index([userId])
   @@index([tourId])
   @@index([status])
 }
 
 model Review {
-  id        String   @id @default(cuid())
-  rating    Int      // Rating from 1 to 5
-  comment   String
+  id String @id @default(cuid())
+  rating Int
+  comment String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  // Relation to the user who wrote the review
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-
-  // Relation to the tour being reviewed
-  tour      Tour     @relation(fields: [tourId], references: [id])
-  tourId    String
-
-  // Database-level constraint: a user can only review a tour once
+  
+  user User @relation(fields: [userId], references: [id])
+  userId String
+  
+  tour Tour @relation(fields: [tourId], references: [id])
+  tourId String
+  
   @@unique([userId, tourId])
 }

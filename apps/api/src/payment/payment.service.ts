@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 import { Chapa } from 'chapa-nodejs';
 import { BookingStatus } from '@prisma/client';
 import { InitializePaymentDto } from './dto/initalize-payment.dto';
@@ -23,6 +24,7 @@ export class PaymentService {
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
+    private emailService: EmailService,
   ) {
     const secretKey = this.configService.get<string>('CHAPA_SECRET_KEY');
 
@@ -324,12 +326,33 @@ export class PaymentService {
             status: BookingStatus.CONFIRMED,
             paidAt: new Date(),
           },
-          include: { tour: true },
+          include: {
+            tour: true,
+            user: {
+              select: { email: true, name: true },
+            },
+          },
         });
 
         this.logger.log(
           `✅ Booking ${booking.id} confirmed after successful payment`,
         );
+
+        // SEND PAYMENT SUCCESS EMAIL
+        try {
+          await this.emailService.sendPaymentSuccess({
+            to: updatedBooking.user.email,
+            userName: updatedBooking.user.name || 'Customer',
+            tourName: updatedBooking.tour.name,
+            bookingId: updatedBooking.id,
+            amount: updatedBooking.totalAmount,
+            paidAt: updatedBooking.paidAt!,
+            transactionRef: transactionReference,
+          });
+        } catch (error) {
+          this.logger.error('Failed to send payment success email:', error);
+          // Don't fail the payment confirmation if email fails
+        }
 
         return {
           status: 'success',

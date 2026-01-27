@@ -1,4 +1,6 @@
 // apps/api/src/tours/dto/query-tours.dto.ts
+// UPDATE THIS FILE - ADD CATEGORY FILTERING
+
 import {
   IsOptional,
   IsString,
@@ -8,6 +10,7 @@ import {
   IsDateString,
   IsEnum,
   IsBoolean,
+  IsArray,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -30,6 +33,12 @@ export class QueryToursDto {
   @IsOptional()
   @IsString()
   location?: string;
+
+  // NEW: Category filter
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  categoryIds?: string[];
 
   // Price filters
   @IsOptional()

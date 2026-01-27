@@ -1,11 +1,13 @@
 // apps/api/src/booking/booking.service.ts
+// ADD EMAIL SERVICE INTEGRATION
+
 import {
   Injectable,
   NotFoundException,
   BadRequestException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service'; // IMPORT THIS
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { CancelBookingDto } from './dto/cancel-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
@@ -13,10 +15,12 @@ import { BookingStatus } from '@prisma/client';
 
 @Injectable()
 export class BookingService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService, // INJECT EMAIL SERVICE
+  ) {}
 
   async createBooking(userId: string, dto: CreateBookingDto) {
-    // Verify the tour exists
     const tour = await this.prisma.tour.findUnique({
       where: { id: dto.tourId },
     });
@@ -25,14 +29,12 @@ export class BookingService {
       throw new NotFoundException('Tour not found');
     }
 
-    // Check if tour is in the past
     if (new Date(tour.startDate) < new Date()) {
       throw new BadRequestException(
         'Cannot book a tour that has already started',
       );
     }
 
-    // Check available capacity
     const availableSlots = tour.maxParticipants - tour.bookedSlots;
     if (availableSlots < dto.numberOfParticipants) {
       throw new BadRequestException(
@@ -40,7 +42,6 @@ export class BookingService {
       );
     }
 
-    // Check for existing pending/confirmed booking for this user and tour
     const existingBooking = await this.prisma.booking.findFirst({
       where: {
         userId,
@@ -55,18 +56,14 @@ export class BookingService {
       );
     }
 
-    // Calculate total amount
     const totalAmount = tour.price * dto.numberOfParticipants;
 
-    // Create the booking using a transaction to ensure data consistency
     const booking = await this.prisma.$transaction(async (tx) => {
-      // Reserve the slots by incrementing bookedSlots
       await tx.tour.update({
         where: { id: dto.tourId },
         data: { bookedSlots: { increment: dto.numberOfParticipants } },
       });
 
-      // Create the booking
       return tx.booking.create({
         data: {
           userId,
@@ -85,9 +82,33 @@ export class BookingService {
               price: true,
             },
           },
+          user: {
+            select: {
+              email: true,
+              name: true,
+            },
+          },
         },
       });
     });
+
+    // SEND BOOKING CONFIRMATION EMAIL
+    try {
+      await this.emailService.sendBookingConfirmation({
+        to: booking.user.email,
+        userName: booking.user.name || 'Customer',
+        tourName: booking.tour.name,
+        bookingId: booking.id,
+        numberOfParticipants: booking.numberOfParticipants,
+        totalAmount: booking.totalAmount,
+        bookingDate: booking.bookingDate,
+        tourStartDate: booking.tour.startDate,
+        tourEndDate: booking.tour.endDate,
+      });
+    } catch (error) {
+      // Log but don't fail the booking if email fails
+      console.error('Failed to send booking confirmation email:', error);
+    }
 
     return booking;
   }
@@ -127,9 +148,8 @@ export class BookingService {
       throw new NotFoundException('Booking not found');
     }
 
-    // Users can only view their own bookings (admins handled separately)
     if (booking.userId !== userId) {
-      throw new ForbiddenException('You can only view your own bookings');
+      throw new BadRequestException('You can only view your own bookings');
     }
 
     return booking;
@@ -142,19 +162,22 @@ export class BookingService {
   ) {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { tour: true },
+      include: {
+        tour: true,
+        user: {
+          select: { email: true, name: true },
+        },
+      },
     });
 
     if (!booking) {
       throw new NotFoundException('Booking not found');
     }
 
-    // Check ownership
     if (booking.userId !== userId) {
-      throw new ForbiddenException('You can only cancel your own bookings');
+      throw new BadRequestException('You can only cancel your own bookings');
     }
 
-    // Check if already cancelled or completed
     if (booking.status === BookingStatus.CANCELLED) {
       throw new BadRequestException('This booking is already cancelled');
     }
@@ -163,22 +186,18 @@ export class BookingService {
       throw new BadRequestException('Cannot cancel a completed booking');
     }
 
-    // Check if tour has already started
     if (new Date(booking.tour.startDate) < new Date()) {
       throw new BadRequestException(
         'Cannot cancel a booking for a tour that has already started',
       );
     }
 
-    // Cancel the booking and release the slots
     const cancelledBooking = await this.prisma.$transaction(async (tx) => {
-      // Release the booked slots
       await tx.tour.update({
         where: { id: booking.tourId },
         data: { bookedSlots: { decrement: booking.numberOfParticipants } },
       });
 
-      // Update the booking status
       return tx.booking.update({
         where: { id: bookingId },
         data: {
@@ -189,6 +208,20 @@ export class BookingService {
         include: { tour: true },
       });
     });
+
+    // SEND CANCELLATION EMAIL
+    try {
+      await this.emailService.sendBookingCancellation({
+        to: booking.user.email,
+        userName: booking.user.name || 'Customer',
+        tourName: booking.tour.name,
+        bookingId: booking.id,
+        reason: dto.reason,
+        cancelledAt: cancelledBooking.cancelledAt!,
+      });
+    } catch (error) {
+      console.error('Failed to send cancellation email:', error);
+    }
 
     return cancelledBooking;
   }
@@ -240,7 +273,6 @@ export class BookingService {
       throw new NotFoundException('Booking not found');
     }
 
-    // Prevent status changes for already completed bookings
     if (
       booking.status === BookingStatus.COMPLETED &&
       dto.status !== BookingStatus.COMPLETED
@@ -248,14 +280,12 @@ export class BookingService {
       throw new BadRequestException('Cannot modify a completed booking');
     }
 
-    // Handle slot management when changing to/from CANCELLED
     let updatedBooking;
 
     if (
       dto.status === BookingStatus.CANCELLED &&
       booking.status !== BookingStatus.CANCELLED
     ) {
-      // Cancelling: release slots
       updatedBooking = await this.prisma.$transaction(async (tx) => {
         await tx.tour.update({
           where: { id: booking.tourId },
@@ -275,7 +305,6 @@ export class BookingService {
       booking.status === BookingStatus.CANCELLED &&
       dto.status !== BookingStatus.CANCELLED
     ) {
-      // Reactivating: reserve slots again
       const availableSlots =
         booking.tour.maxParticipants - booking.tour.bookedSlots;
       if (availableSlots < booking.numberOfParticipants) {
@@ -300,7 +329,6 @@ export class BookingService {
         });
       });
     } else {
-      // Simple status update without slot changes
       updatedBooking = await this.prisma.booking.update({
         where: { id: bookingId },
         data: { status: dto.status },
@@ -313,7 +341,12 @@ export class BookingService {
   async adminCancelBooking(bookingId: string, dto: CancelBookingDto) {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { tour: true },
+      include: {
+        tour: true,
+        user: {
+          select: { email: true, name: true },
+        },
+      },
     });
 
     if (!booking) {
@@ -344,6 +377,20 @@ export class BookingService {
         include: { tour: true, user: { select: { email: true, name: true } } },
       });
     });
+
+    // SEND CANCELLATION EMAIL
+    try {
+      await this.emailService.sendBookingCancellation({
+        to: booking.user.email,
+        userName: booking.user.name || 'Customer',
+        tourName: booking.tour.name,
+        bookingId: booking.id,
+        reason: dto.reason || 'Cancelled by administrator',
+        cancelledAt: cancelledBooking.cancelledAt!,
+      });
+    } catch (error) {
+      console.error('Failed to send cancellation email:', error);
+    }
 
     return cancelledBooking;
   }

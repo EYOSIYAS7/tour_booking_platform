@@ -1,5 +1,5 @@
 // apps/api/prisma/schema.prisma
-// ADD CATEGORY MODEL AND UPDATE TOUR MODEL
+// ADD WISHLIST MODEL
 
 generator client {
   provider = "prisma-client-js"
@@ -34,6 +34,7 @@ model User {
   booking Booking[]
   review Review[]
   tour Tour[]
+  wishlist Wishlist[] // NEW: User's wishlist items
 }
 
 model Tour {
@@ -54,30 +55,29 @@ model Tour {
   bookings Booking[]
   review Review[]
   provider User @relation(fields: [providerId], references: [id])
-  categories TourCategory[] // NEW: Many-to-many relation
+  categories TourCategory[]
+  wishlistedBy Wishlist[] // NEW: Users who wishlisted this tour
   
   @@index([providerId])
   @@index([location])
   @@index([startDate])
 }
 
-// NEW: Category Model
 model Category {
   id String @id @default(cuid())
   name String @unique
   slug String @unique
   description String?
-  icon String? // Emoji or icon name
-  color String? // Hex color for UI
+  icon String?
+  color String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  tours TourCategory[] // Many-to-many relation
+  tours TourCategory[]
   
   @@index([slug])
 }
 
-// NEW: Junction table for Many-to-Many relationship
 model TourCategory {
   id String @id @default(cuid())
   tourId String
@@ -87,9 +87,24 @@ model TourCategory {
   tour Tour @relation(fields: [tourId], references: [id], onDelete: Cascade)
   category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   
-  @@unique([tourId, categoryId]) // Prevent duplicate assignments
+  @@unique([tourId, categoryId])
   @@index([tourId])
   @@index([categoryId])
+}
+
+// NEW: Wishlist Model
+model Wishlist {
+  id String @id @default(cuid())
+  userId String
+  tourId String
+  createdAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tour Tour @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, tourId]) // User can only wishlist a tour once
+  @@index([userId])
+  @@index([tourId])
 }
 
 model Booking {

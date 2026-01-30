@@ -12,7 +12,7 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { PaymentsModule } from './payment/payment.module';
 import { EmailModule } from './email/email.module';
 import { CategoriesModule } from './categories/categories.module';
-
+import { WishlistModule } from './whishlist/wishlist.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -25,6 +25,7 @@ import { CategoriesModule } from './categories/categories.module';
     PaymentsModule,
     EmailModule,
     CategoriesModule,
+    WishlistModule,
   ],
   controllers: [AppController],
   providers: [AppService],
